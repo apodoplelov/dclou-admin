@@ -1,0 +1,229 @@
+- name: Ensure package wget
+  pacman:
+    name: "wget"
+    state: present
+
+- name: Check /vm/coreos dir
+  file:
+    path: /vm/coreos
+    state: directory
+
+- name: Fetch coreos_production_pxe.vmlinuz
+  get_url:
+    url: https://stable.release.core-os.net/amd64-usr/current/coreos_production_pxe.vmlinuz
+    dest: /vm/coreos/coreos_production_pxe.vmlinuz
+    mode: 0644
+  register: get_vmlinuz
+- debug: msg="coreos_production_pxe.vmlinuz was downloaded"
+  when: get_vmlinuz|changed
+ 
+- name: Fetch coreos_production_pxe_image.cpio.gz
+  get_url:
+    url: https://stable.release.core-os.net/amd64-usr/current/coreos_production_pxe_image.cpio.gz
+    dest: /vm/coreos/coreos_production_pxe_image.cpio.gz
+    mode: 0644
+  register: get_cpio
+- debug: msg="coreos_production_pxe_image.cpio.gz was downloaded"
+  when: get_cpio|changed
+
+- name: Delete old virtual machines
+  shell: if [ -f /vm/images/{{item}}.qcow2 ]; then virsh destroy {{item}}; virsh undefine {{item}}; rm -f /vm/images/{{item}}.qcow2; fi
+  with_inventory_hostnames:
+    - cluster-managers
+    - cluster-balancers
+    - cluster-storages
+    - cluster-workers
+
+- name: Create VMs
+  include: virt-node.yml
+  with_inventory_hostnames:
+    - cluster-managers
+    - cluster-balancers
+    - cluster-storages
+    - cluster-workers
+  loop_control:
+    loop_var: name
+
+# ------------------------------------------------------------------------------------------------------------------------------------------
+- name: Make /vm directory
+  file:
+    path: /vm
+    state: directory
+- name: Make /vm directory tree
+  file:
+    path: "/vm/{{item}}"
+    state: directory
+  with_items:
+    - images
+    - confs
+    - coreos
+    - dists
+    - nginx
+- name: Get coreos
+  get_url:
+    url: "https://stable.release.core-os.net/amd64-usr/current/{{item}}"
+    dest: "/vm/coreos/{{item}}"
+  with_items:
+    - coreos_production_pxe.vmlinuz
+    - coreos_production_pxe_image.cpio.gz
+- name: Ensure packages
+  pacman:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - libtool
+    - qemu
+    - libvirt
+    - libvirt-python
+    - python-lxml
+    - dhcp
+    - nginx
+    - firewalld
+    - ebtables
+    - dnsmasq
+    - bridge-utils
+    - openbsd-netcat
+    - docker
+- name: Configure dhcpd4 override
+  file:
+    path: /etc/systemd/system/dhcpd4.service.d
+    state: directory
+- name: Configure dhcpd4 service
+  copy:
+    src: files/virbrwait.conf
+    dest: /etc/systemd/system/dhcpd4.service.d/virbrwait.conf
+- name: Configure libvirt qemu
+  copy:
+    src: files/qemu.conf
+    dest: /etc/libvirt/qemu.conf
+- name: Configure nginx
+  copy:
+    src: files/nginx.conf
+    dest: /etc/nginx/nginx.conf
+- name: Mkdir nginx sites
+  file:
+    path: /etc/nginx/sites
+    state: directory
+- name: start services
+  systemd:
+    name: "{{item}}"
+    enabled: true
+    state: started
+  with_items:
+    - libvirtd
+    - firewalld
+- name: Define network
+  virt_net:
+    command: define
+    name: bastion.net
+    xml: '{{lookup("template", "templates/network.j2")}}'
+- name: Autostart network
+  virt_net:
+    name: bastion.net
+    autostart: true
+- name: Start network
+  virt_net:
+    command: start
+    name: bastion.net
+    state: active
+- name: Create pool
+  virt_pool:
+    command: define
+    name: bastion.pool
+    xml: '{{lookup("file", "files/pool.xml")}}'
+- name: Autostart pool
+  virt_pool:
+    name: bastion.pool
+    autostart: true
+- name: Start pool
+  virt_pool:
+    command: start
+    name: bastion.pool
+    state: active
+- name: Polkit wheel
+  copy:
+    src: files/manage.rules
+    dest: /etc/polkit-1/rules.d/manage.rules
+- name: Ensure ssh key present
+  shell: ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" || true
+- name: Apply auth
+  shell: cat ~/.ssh/id_rsa.pub /home/user/.ssh/authorized_keys > /vm/confs/auth
+- name: Trust virbr0
+  firewalld:
+    zone: trusted
+    interface: virbr100
+    immediate: true
+    permanent: true
+    state: enabled
+- name: External ens3
+  firewalld:
+    zone: external
+    interface: ens3
+    immediate: true
+    permanent: true
+    state: enabled
+- name: External http/s
+  firewalld:
+    zone: external
+    service: "{{item}}"
+    immediate: true
+    permanent: true
+    state: enabled
+  with_items:
+    - http
+    - https
+- name: start services
+  systemd:
+    name: "{{item}}"
+    enabled: true
+    state: started
+  with_items:
+    - virtlogd
+    - libvirt-guests
+    - polkit
+- name: Get flanneld
+  get_url:
+    url: https://github.com/coreos/flannel/releases/download/v0.8.0/flanneld-amd64
+    dest: /vm/dists/flanneld
+    mode: 0755
+- name: Get common kubernates
+  get_url:
+    url: "https://storage.googleapis.com/kubernetes-release/release/v1.7.1/bin/linux/amd64/{{item}}"
+    dest: "/vm/dists/{{item}}"
+    mode: 0755
+  with_items:
+    - kubectl
+    - kubelet
+    - kube-proxy
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+- name: get socat
+  get_url:
+    url: https://github.com/aledbf/socat-static-binary/releases/download/v0.0.1/socat-linux-amd64
+    dest: /vm/dists/socat
+    mode: 0755
+- name: Get cni
+  get_url:
+    url: https://github.com/containernetworking/plugins/releases/download/v0.6.0-rc1/cni-plugins-amd64-v0.6.0-rc1.tgz
+    dest: /vm/dists/cni.tar.gz  
+- name: Get pypy
+  get_url:
+    url: https://bitbucket.org/pypy/pypy/downloads/pypy2-v5.7.1-linux64.tar.bz2
+    dest: /vm/dists/pypy.tar.bz2
+- name: Get etcd
+  get_url:
+    url: https://github.com/coreos/etcd/releases/download/v3.2.3/etcd-v3.2.3-linux-amd64.tar.gz
+    dest: /vm/dists/etcd.tar.gz
+- name: Extract etcd binaries
+  unarchive:
+    remote_src: true
+    src: /vm/dists/etcd.tar.gz
+    dest: /vm/dists/
+    extra_opts:
+      - --wildcards
+      - '*/etcd'
+      - '*/etcdctl'
+      - --strip=1
+
+

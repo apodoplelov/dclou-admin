@@ -1,0 +1,39 @@
+{% set net = hostvars[inventory_hostname].net %}
+{% set bastion = net | ipaddr('1') | ipaddr('address') %}
+{
+  "ignition": {
+    "version": "2.0.0",
+    "config": {}
+  },
+  "storage":{},
+  "systemd": {
+    "units": [
+      {
+        "name": "online@.service",
+        "contents": "[Service]\nType=forking\nExecStart=/bin/sh -c 'echo \"online\" \u003e\u00263'\n"
+      },
+      {
+        "name": "init-restart.service",
+        "enable": true,
+        "contents": "[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl restart sshd\n[Install]\nWantedBy=multi-user.target\n"
+      },
+      {
+        "name": "sshd.service",
+        "enable": true,
+        "dropins": [
+          {
+            "name": "auth.conf",
+            "contents": "[Unit]\nAfter=etc-ssh.mount\n[Service]\nExecStartPre=/bin/ln -fs /usr/share/ssh/sshd_config /etc/ssh/sshd_config\nExecStart=\nExecStart=/usr/sbin/sshd -D -o AuthorizedKeysCommand=\"/usr/bin/curl http://{{bastion}}/confs/auth\" -o AuthorizedKeysCommandUser=root\n"
+          }
+        ]
+      },
+      {
+        "name": "post-install.service",
+        "enable": true,
+        "contents": "[Unit]\nConditionPathExists=!/data/post\nAfter=network-online.target\nRequires=network-online.target\n[Service]\nType=oneshot\nExecStart=/bin/sh -c '\\\n  mkdir -p /data/bin \u0026\u0026 \\\n  mkdir -p /data/python/lib \u0026\u0026 \\\n  wget -nv -O /data/python/arch.tar.gz http://{{bastion}}/dists/pypy.tar.bz2 \u0026\u0026 \\\n  tar -C /data/python --strip 1 -xf /data/python/arch.tar.gz \u0026\u0026 \\\n  ln -s /lib64/libncurses.so.5.9 /data/python/lib/libtinfo.so.5 \u0026\u0026 \\\n  echo -e \"#!/bin/sh\\nLD_LIBRARY_PATH=/data/python/lib:$LD_LIBRARY_PATH exec /data/python/bin/pypy \\\\\"\\\\$@\\\\\"\" \u003e /data/bin/python \u0026\u0026 \\\n  chmod +x /data/bin/python \u0026\u0026 \\\n  echo -e \"source /etc/profile\" \u003e\u003e /etc/bash.bashrc \u0026\u0026 \\\n  echo -e \"#!/bin/sh\\nexport PATH=\\\\\"/data/bin:\\\\$PATH\\\\\"\" \u003e\u003e /etc/profile.d/databin.sh \u0026\u0026 \\\n  chmod +x /etc/profile.d/databin.sh \u0026\u0026 \\\n  echo -e \"[Socket]\\nListenStream=50000\\nAccept=true\\n[Install]\\nWantedBy=sockets.target\\n\" \u003e\u003e /etc/systemd/system/online.socket \u0026\u0026 \\\n  hostnamectl set-hostname {{name}} \u0026\u0026 \\\n  systemctl start online.socket \\\n'\nExecStartPost=/bin/touch /data/post\n[Install]\nWantedBy=multi-user.target\n"
+      }
+    ]
+  },
+  "passwd":{},
+  "networkd": {}
+}

@@ -1,0 +1,7 @@
+{% set net = hostvars[inventory_hostname].net %}
+<network>
+  <name>bastion.net</name>
+  <bridge name="virbr100" />
+  <forward mode="route" />
+  <ip address="{{net | ipaddr('1') | ipaddr('address')}}" netmask="{{net | ipaddr('netmask')}}" />
+</network>

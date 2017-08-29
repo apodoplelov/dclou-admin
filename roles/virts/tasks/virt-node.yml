@@ -1,0 +1,27 @@
+- name: Make directory
+  file:
+    path: "/vm/confs/{{name}}"
+    state: directory
+- name: Make config
+  template:
+    src: templates/cloud-config.j2
+    dest: "/vm/confs/{{name}}/cloud-config.json"
+- name: Create volume
+  shell: |
+    qemu-img create -f raw /vm/images/{{name}}.raw {{hostvars[name].disk}}G
+    dev=$(losetup --show --find /vm/images/{{name}}.raw)
+    parted -s ${dev} mklabel msdos
+    parted -s ${dev} mkpart primary 0% 100%
+    mkfs.ext4 ${dev}p1
+    losetup -d $dev
+    qemu-img convert -O qcow2 /vm/images/{{name}}.raw /vm/images/{{name}}.qcow2
+    rm /vm/images/{{name}}.raw
+- name: Define vm
+  virt:
+    name: "{{name}}"
+    command: define
+    xml: "{{lookup('template', 'templates/vm.j2')}}"
+- name: Start vm
+  virt:
+    name: "{{name}}"
+    state: running

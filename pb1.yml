@@ -1,0 +1,11 @@
+- hosts: sx
+  become: true
+  roles:
+    - rl1
+#  tasks:
+#  - name: PWD
+#    shell: ls -1
+#    register: out
+#  - debug: var=out.stdout_lines
+#  - debug: var=hostvars[inventory_hostname].ansible_devices.sda.model
+#  - debug: var=hostvars[inventory_hostname].net

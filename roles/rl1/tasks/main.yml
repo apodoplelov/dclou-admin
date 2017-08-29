@@ -1,0 +1,4 @@
+- name: VList
+  shell: virsh list --name --all
+  register: out
+- debug: var=out

@@ -1,0 +1,131 @@
+- name: Make /vm directory
+  file:
+    path: /vm
+    state: directory
+- name: Make /vm directory tree
+  file:
+    path: "/vm/{{item}}"
+    state: directory
+  with_items:
+    - images
+    - coreos
+
+- name: Get CoreOs
+  get_url:
+    url: "https://stable.release.core-os.net/amd64-usr/current/{{item}}"
+    dest: "/vm/coreos/{{item}}"
+  with_items:
+    - coreos_production_pxe.vmlinuz
+    - coreos_production_pxe_image.cpio.gz
+
+- name: Ensure packages
+  pacman:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - libtool
+    - qemu
+    - libvirt
+#    - libvirt-python
+#    - python-lxml
+#    - dhcp
+#    - nginx
+#    - firewalld
+#    - ebtables
+#    - dnsmasq
+    # - bridge-utils
+    # - openbsd-netcat
+    - docker
+    - polkit
+
+- name: Configure libvirt qemu
+  copy:
+    src: files/qemu.conf
+    dest: /etc/libvirt/qemu.conf
+
+- name: Start Services
+  systemd:
+    name: "{{item}}"
+    enabled: true
+    state: started
+  with_items:
+    - libvirtd
+#    - firewalld
+
+- name: Define Network
+  virt_net:
+    command: define
+    name: bastion.net
+    xml: '{{lookup("template", "templates/network.j2")}}'
+
+- name: Autostart Network
+  virt_net:
+    name: bastion.net
+    autostart: true
+
+- name: Start Network
+  virt_net:
+    command: start
+    name: bastion.net
+    state: active
+
+- name: Create Pool
+  virt_pool:
+    command: define
+    name: bastion.pool
+    xml: '{{lookup("file", "files/pool.xml")}}'
+
+- name: Autostart Pool
+  virt_pool:
+    name: bastion.pool
+    autostart: true
+
+- name: Start Pool
+  virt_pool:
+    command: start
+    name: bastion.pool
+    state: active
+
+- name: Polkit wheel
+  copy:
+    src: files/manage.rules
+    dest: /etc/polkit-1/rules.d/manage.rules
+
+- name: Trust virbr0
+  firewalld:
+    zone: trusted
+    interface: virbr100
+    immediate: true
+    permanent: true
+    state: enabled
+
+- name: External ens3
+  firewalld:
+    zone: external
+    interface: ens3
+    immediate: true
+    permanent: true
+    state: enabled
+
+- name: External http/s
+  firewalld:
+    zone: external
+    service: "{{item}}"
+    immediate: true
+    permanent: true
+    state: enabled
+  with_items:
+    - http
+    - https
+
+- name: Start Services
+  systemd:
+    name: "{{item}}"
+    enabled: true
+    state: started
+  with_items:
+    - virtlogd
+    - libvirt-guests
+    - polkit
+
+

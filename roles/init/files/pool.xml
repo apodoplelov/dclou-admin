@@ -1,0 +1,12 @@
+<pool type='dir'>
+  <name>bastion.pool</name>
+  <target>
+    <path>/vm/images</path>
+    <permissions>
+      <mode>0711</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>
+

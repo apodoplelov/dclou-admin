@@ -84,22 +84,22 @@
     - bridge-utils
     - openbsd-netcat
     - docker
-- name: Configure dhcpd4 override
-  file:
-    path: /etc/systemd/system/dhcpd4.service.d
-    state: directory
-- name: Configure dhcpd4 service
-  copy:
-    src: files/virbrwait.conf
-    dest: /etc/systemd/system/dhcpd4.service.d/virbrwait.conf
-- name: Configure libvirt qemu
-  copy:
-    src: files/qemu.conf
-    dest: /etc/libvirt/qemu.conf
-- name: Configure nginx
-  copy:
-    src: files/nginx.conf
-    dest: /etc/nginx/nginx.conf
+# - name: Configure dhcpd4 override
+#   file:
+#     path: /etc/systemd/system/dhcpd4.service.d
+#     state: directory
+# - name: Configure dhcpd4 service
+#   copy:
+#     src: files/virbrwait.conf
+#     dest: /etc/systemd/system/dhcpd4.service.d/virbrwait.conf
+# - name: Configure libvirt qemu
+#   copy:
+#     src: files/qemu.conf
+#     dest: /etc/libvirt/qemu.conf
+# - name: Configure nginx
+#   copy:
+#     src: files/nginx.conf
+#     dest: /etc/nginx/nginx.conf
 - name: Mkdir nginx sites
   file:
     path: /etc/nginx/sites

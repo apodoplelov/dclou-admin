@@ -1,7 +1,8 @@
+{% set iface = hostvars[inventory_hostname].iface %}
 {% set net = hostvars[inventory_hostname].net %}
 <network>
   <name>bastion.net</name>
-  <bridge name="virbr100" />
+  <bridge name="{{iface}}" />
   <forward mode="route" />
   <ip address="{{net | ipaddr('1') | ipaddr('address')}}" netmask="{{net | ipaddr('netmask')}}" />
 </network>

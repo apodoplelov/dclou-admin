@@ -1,3 +1,7 @@
+#- name: Display all variables/facts known for a host
+#  debug:
+#    var: hostvars[inventory_hostname]
+
 - name: Make /vm directory
   file:
     path: /vm
@@ -51,6 +55,24 @@
   with_items:
     - libvirtd
 #    - firewalld
+
+- name: List virtual networks
+  virt_net:
+    command: list_nets
+  register: out
+- debug: var=out.list_nets
+
+- name: Show virtual networks
+  virt_net:
+    command: facts
+  register: vnets
+- debug: var=vnets
+
+- name: UnDefine Network
+  virt_net:
+    command: undefine
+    name: bastion.net
+  when: vnets.ansible_facts.ansible_libvirt_networks["bastion.net"] is defined
 
 - name: Define Network
   virt_net:

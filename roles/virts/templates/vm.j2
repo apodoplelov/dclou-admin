@@ -1,4 +1,5 @@
 
+{% set iface  = hostvars[inventory_hostname].iface %}
 {% set net = hostvars[inventory_hostname].net %}
 {% set bastion = net | ipaddr('1') | ipaddr('address') %}
 {% set memory  = hostvars[name].memory %}
@@ -29,7 +30,7 @@
     </controller>
     <interface type='bridge'>
       <mac address='{{macaddr}}'/>
-      <source bridge='virbr100'/>
+      <source bridge='{{iface}}'/>
       <model type='rtl8139'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>

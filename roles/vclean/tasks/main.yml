@@ -1,0 +1,15 @@
+- name: Delete old virtual machines
+  shell: |
+    true && [ -f /vm/images/{{host}}.qcow2 ] || {
+              virsh destroy {{host}}
+              virsh undefine {{host}}
+              rm -f /vm/images/{{host}}.qcow2
+            }
+  with_inventory_hostnames:
+    - cluster-managers
+    - cluster-balancers
+    - cluster-storages
+    - cluster-workers
+  loop_control:
+    loop_var: host
+

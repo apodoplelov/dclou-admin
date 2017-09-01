@@ -113,10 +113,10 @@
     src: files/manage.rules
     dest: /etc/polkit-1/rules.d/manage.rules
 
-- name: Trust virbr0
+- name: Trust {{iface}}
   firewalld:
     zone: trusted
-    interface: virbr100
+    interface: {{iface}}
     immediate: true
     permanent: true
     state: enabled

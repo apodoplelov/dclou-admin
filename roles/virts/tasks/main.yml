@@ -1,13 +1,14 @@
 - name: Delete old virtual machines
   shell: |
-    true && [ -f /vm/images/{{host}}.qcow2 ] || {
+    if [ -f /vm/images/{{host}}.qcow2 ]; then
               virsh destroy {{host}}
               virsh undefine {{host}}
               rm -f /vm/images/{{host}}.qcow2
-            }
+              rm -fr /vm/conf/{{host}}
+    fi
   with_inventory_hostnames:
-    - cluster-managers
     - cluster-balancers
+    - cluster-managers
     - cluster-storages
     - cluster-workers
   loop_control:
@@ -16,8 +17,8 @@
 - name: Create VMs
   include: virt-node.yml
   with_inventory_hostnames:
-    - cluster-managers
     - cluster-balancers
+    - cluster-managers
     - cluster-storages
     - cluster-workers
   loop_control:

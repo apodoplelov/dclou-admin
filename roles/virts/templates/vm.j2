@@ -14,7 +14,7 @@
     <type arch='x86_64' machine='pc-i440fx-2.9'>hvm</type>
     <kernel>/vm/coreos/coreos_production_pxe.vmlinuz</kernel>
     <initrd>/vm/coreos/coreos_production_pxe_image.cpio.gz</initrd>
-    <cmdline>root=/dev/sda1 coreos.autologin=tty1 coreos.first_boot=1 coreos.config.url=http://{{bastion}}/confs/{{name}}/cloud-config.json</cmdline>
+    <cmdline>root=/dev/sda1 coreos.autologin=tty1 coreos.first_boot=1 coreos.config.url=http://{{bastion}}/conf/{{name}}/cloud-config.json</cmdline>
   </os>
   <devices>
     <emulator>/usr/sbin/qemu-system-x86_64</emulator>

@@ -1,11 +1,11 @@
 - name: Make directory
   file:
-    path: "/vm/confs/{{name}}"
+    path: "/vm/conf/{{name}}"
     state: directory
 - name: Make config
   template:
     src: templates/cloud-config.j2
-    dest: "/vm/confs/{{name}}/cloud-config.json"
+    dest: "/vm/conf/{{name}}/cloud-config.json"
 - name: Create volume
   shell: |
     qemu-img create -f raw /vm/images/{{name}}.raw {{hostvars[name].disk}}G

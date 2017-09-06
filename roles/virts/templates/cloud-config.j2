@@ -23,7 +23,7 @@
         "dropins": [
           {
             "name": "auth.conf",
-            "contents": "[Unit]\nAfter=etc-ssh.mount\n[Service]\nExecStartPre=/bin/ln -fs /usr/share/ssh/sshd_config /etc/ssh/sshd_config\nExecStart=\nExecStart=/usr/sbin/sshd -D -o AuthorizedKeysCommand=\"/usr/bin/curl http://{{bastion}}/confs/auth\" -o AuthorizedKeysCommandUser=root\n"
+            "contents": "[Unit]\nAfter=etc-ssh.mount\n[Service]\nExecStartPre=/bin/ln -fs /usr/share/ssh/sshd_config /etc/ssh/sshd_config\nExecStart=\nExecStart=/usr/sbin/sshd -D -o AuthorizedKeysCommand=\"/usr/bin/curl http://{{bastion}}/conf/auth\" -o AuthorizedKeysCommandUser=root\n"
           }
         ]
       },
